@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Appointment</title>
+<link rel="stylesheet" href="appointment.css">
+</head>
+
+<body>
+
+<div class="wrapper">
+
+<div class="left">
+<h1>MediSphere Health System</h1>
+</div>
+
+<div class="right">
+
+<form id="appointmentForm">
+
+<label>Patient Name</label>
+<input type="text" id="name" required>
+
+<label>Phone</label>
+<input type="text" id="phone" required>
+
+<label>Department</label>
+<select id="dept" required></select>
+
+<label>Doctor</label>
+<select id="doctorSelect" required></select>
+
+<label>Date</label>
+<input type="date" id="date" required>
+
+<label>Time</label>
+<input type="time" id="time" required>
+
+<label>Reason</label>
+<textarea id="reason"></textarea>
+
+<button type="submit" class="btn-primary">Submit</button>
+
+</form>
+
+</div>
+</div>
+
+<script>
+const API = "https://localhost:7029/api";
+
+let allDoctors = [];
+
+// ✅ LOAD DOCTORS + DEPARTMENTS
+window.onload = async () => {
+    try {
+        const res = await fetch(API + "/Doctors");
+        allDoctors = await res.json();
+
+        const deptSelect = document.getElementById("dept");
+
+        // GET UNIQUE DEPARTMENTS
+        const departments = [...new Set(allDoctors.map(d => d.department))];
+
+        deptSelect.innerHTML = `<option value="">Select Department</option>`;
+
+        departments.forEach(dep => {
+            deptSelect.innerHTML += `<option value="${dep}">${dep}</option>`;
+        });
+
+    } catch (err) {
+        console.log(err);
+        alert("Error loading doctors");
+    }
+};
+
+// ✅ FILTER DOCTORS BASED ON DEPARTMENT
+document.getElementById("dept").addEventListener("change", function () {
+    const selectedDept = this.value;
+    const doctorSelect = document.getElementById("doctorSelect");
+
+    doctorSelect.innerHTML = `<option value="">Select Doctor</option>`;
+
+    const filtered = allDoctors.filter(d => d.department === selectedDept);
+
+    filtered.forEach(d => {
+        doctorSelect.innerHTML += `
+            <option value="${d.id}">
+                Dr. ${d.firstName} ${d.lastName}
+            </option>`;
+    });
+});
+
+// ✅ SUBMIT APPOINTMENT
+document.getElementById("appointmentForm").addEventListener("submit", async function(e){
+    e.preventDefault();
+
+    const name = document.getElementById("name").value.trim().split(" ");
+
+    const data = {
+        firstName: name[0],
+        middleName: name[1] || "",
+        lastName: name[2] || "",
+
+        // FIXED DEFAULTS (pwede nimo i-expand later)
+        dateOfBirth: "2000-01-01",
+        gender: "Male",
+        civilStatus: "Single",
+        address: "N/A",
+        phone: document.getElementById("phone").value,
+        email: "web@gmail.com",
+
+        doctorId: parseInt(document.getElementById("doctorSelect").value),
+        appointmentDate: document.getElementById("date").value,
+        appointmentTime: document.getElementById("time").value + ":00",
+        reason: document.getElementById("reason").value || ""
+    };
+
+    try {
+        const res = await fetch(API + "/Appointments/full", {
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body: JSON.stringify(data)
+        });
+
+        if(res.ok){
+            alert("✅ Appointment Saved!");
+            window.location.href = "appointment-success.html";
+        } else {
+            const err = await res.text();
+            alert("❌ Error: " + err);
+        }
+
+    } catch (err) {
+        console.log(err);
+        alert("❌ Server Error");
+    }
+});
+</script>
+
+</body>
+</html>
