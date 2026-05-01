@@ -28,5 +28,7 @@ namespace HospitalAPI.Models
         // navigation
         public Patient Patient { get; set; }
         public Doctor Doctor { get; set; }
+
+        public string? Prescription { get; set; }
     }
 }

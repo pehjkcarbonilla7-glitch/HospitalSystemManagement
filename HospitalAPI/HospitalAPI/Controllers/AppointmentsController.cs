@@ -16,6 +16,13 @@ namespace HospitalAPI.Controllers
             _context = context;
         }
 
+
+        public class CompleteRequest
+        {
+            public string Prescription { get; set; }
+        }
+
+
         // ✅ CREATE FULL (PATIENT + APPOINTMENT)
         [HttpPost("full")]
         public async Task<IActionResult> CreateFull(AppointmentRequest req)
@@ -91,6 +98,30 @@ namespace HospitalAPI.Controllers
             return Ok(data);
         }
 
+        [HttpGet("today")]
+        public async Task<IActionResult> GetTodayAppointments()
+        {
+            var today = DateTime.Today;
+
+            var data = await _context.Appointments
+                .Include(a => a.Patient)
+                .Include(a => a.Doctor)
+                .Where(a => a.AppointmentDate == today && a.Status == "Pending")
+                .Select(a => new
+                {
+                    a.Id,
+                    PatientName = a.Patient.FirstName + " " + a.Patient.LastName,
+                    DoctorName = a.Doctor.FirstName + " " + a.Doctor.LastName,
+                    a.AppointmentDate,
+                    a.AppointmentTime,
+                    a.Reason,
+                    a.Status
+                })
+                .ToListAsync();
+
+            return Ok(data);
+        }
+
         // ✅ DELETE
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
@@ -119,6 +150,28 @@ namespace HospitalAPI.Controllers
             await _context.SaveChangesAsync();
 
             return Ok("Status updated");
+        }
+
+
+        // ✅ COMPLETE APPOINTMENT (STATUS + PRESCRIPTION)
+        [HttpPut("complete/{id}")]
+        public async Task<IActionResult> CompleteAppointment(int id, [FromBody] CompleteRequest data)
+        {
+            var appointment = await _context.Appointments.FindAsync(id);
+
+            if (appointment == null)
+                return NotFound("Appointment not found");
+
+            appointment.Status = "Completed";
+            appointment.Prescription = data?.Prescription ?? "";
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                message = "Appointment completed successfully",
+                appointmentId = id
+            });
         }
     }
 }
